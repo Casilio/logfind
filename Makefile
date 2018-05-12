@@ -1,6 +1,6 @@
 CC = clang
 CFLAGS = -Wall -g
-override CFLAGS += -fsanitize=address -fno-omit-frame-pointer
+#override CFLAGS += -fsanitize=address -fno-omit-frame-pointer
 
 project = logfind
 
