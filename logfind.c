@@ -1,19 +1,57 @@
 #include "logfind.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <fnmatch.h>
+#include <ftw.h>
 #include "io_utils.h"
 #include "dbg.h"
 
 static char **results;
 static int results_count = 0;
 
-int init_result_table() {
+static char **keywords;
+static int search_mode = AND_MODE;
+
+static char **filters;
+
+static size_t init_filters(char ***__filters) {
+    *__filters = realloc(*__filters, 0);
+
+    FILE *fp = fopen(".logfind", "r"); 
+    if (fp == NULL) {
+        *__filters = malloc(sizeof(char*));
+        *__filters[0] = strdup("*");
+        return 1;
+    }
+
+    int count = 0;
+    char *line;
+    while ((line = read_line(fp)) != NULL) {
+        *__filters = realloc(*__filters, sizeof(char*) * (count + 1));
+        (*__filters)[count++] = strdup(line);
+    }
+
+    return count;
+}
+
+int init_logfind(int __search_mode, char **__keywords) {
+    search_mode = __search_mode;
+    keywords = __keywords;
+
     results = malloc(0);
     check_mem(results);
+
+    init_filters(&filters);
 
     return 0;
 error:
     return -1;
+}
+
+int logfind_start() {
+    ftw(".", process_file, 20);
+
+    return 0;
 }
 
 void add_to_results(char *file_name) {
@@ -26,13 +64,21 @@ void add_to_results(char *file_name) {
     strcpy(results[results_count++], file_name);
 }
 
-void free_results() {
+int logfind_end() {
     int i;
     for(i = 0; i < results_count; i++) {
         if (results[i]) free(results[i]);
     }
 
     free(results);
+
+    i = 0;
+    while(filters[i]) {
+        if (filters[i]) free(filters[i++]);
+    }
+    free(filters);
+
+    return 0;
 }
 
 void print_results() {
@@ -42,7 +88,7 @@ void print_results() {
     }
 }
 
-static int process_file_or_mode(FILE *fp, char **keywords) {
+static int process_file_or_mode(FILE *fp) {
     int match = 0;
     char *line;
     int i;
@@ -62,7 +108,7 @@ static int process_file_or_mode(FILE *fp, char **keywords) {
     return match;
 }
 
-static int process_file_and_mode(FILE *fp, char **keywords) {
+static int process_file_and_mode(FILE *fp) {
     char *line;
     int i = 0;
 
@@ -98,12 +144,29 @@ static int process_file_and_mode(FILE *fp, char **keywords) {
     return match;
 }
 
-int process_file(FILE *fp, char **keywords, int search_mode) {
+static int process_file(const char *fpath, const struct stat *sb, int typeflag) {
+    FILE *fp = fopen(fpath, "r");
+
+    int is_match_filters = 0;
+    int i = 0;
+    while(filters[i]) {
+        if (fnmatch(filters[i++], fpath, 0) == 0) {
+            is_match_filters = 1;
+            break;
+        }
+    }
+
+    if (!is_match_filters) return 0;
+
     int result;
     if (search_mode == OR_MODE) {
-        result = process_file_or_mode(fp, keywords);
+        result = process_file_or_mode(fp);
     } else {
-        result = process_file_and_mode(fp, keywords);
+        result = process_file_and_mode(fp);
     }
-    return result;
+    if (result) add_to_results((char*)fpath);
+
+    fclose(fp);
+
+    return 0;
 }

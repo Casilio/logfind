@@ -2,16 +2,18 @@
 #define __logfind_h
 
 #include <stdio.h>
+#include <ftw.h>
 
 enum SearchMode {
     AND_MODE, OR_MODE
 };
 
-int init_result_table();
+int init_logfind(int search_mode, char **keywords);
 void add_to_results(char *file_name);
-void free_results();
 void print_results();
+int logfind_start();
+int logfind_end();
 
-int process_file(FILE *fp, char **keywords, int search_mode);
+static int process_file(const char *fpath, const struct stat *sb, int typeflag);
 
 #endif
