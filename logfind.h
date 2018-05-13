@@ -14,6 +14,4 @@ void print_results();
 int logfind_start();
 int logfind_end();
 
-static int process_file(const char *fpath, const struct stat *sb, int typeflag);
-
 #endif

@@ -6,6 +6,8 @@
 #include "io_utils.h"
 #include "dbg.h"
 
+static int process_file(const char *fpath, const struct stat *sb, int typeflag);
+
 static char **results;
 static int results_count = 0;
 
