@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "dbg.h": "c",
+        "logfind.h": "c",
+        "io_utils.h": "c",
+        "dirent.h": "c"
+    }
+}
